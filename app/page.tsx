@@ -3,8 +3,7 @@ import { EVENT, EVENT_MAP_URL } from "@/lib/event";
 import AuctionSection from "./AuctionSection";
 
 // Re-render at most this often; the sheet is re-read in the background, so new
-// form responses show up without a redeploy. Next.js requires a literal here;
-// keep in sync with REVALIDATE_SECONDS in lib/donations.ts.
+// form responses show up without a redeploy.
 export const revalidate = 60;
 
 export default async function Page() {

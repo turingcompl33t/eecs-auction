@@ -1,9 +1,10 @@
 import { unstable_cache } from "next/cache";
-import { googleFetch, hasCredentials } from "./google";
+import { googleGetJson, hasCredentials } from "./google";
 import { SAMPLE_ROWS } from "./sample";
 
-// How often the sheet is re-read. Keep in sync with `revalidate` in app/page.tsx.
-export const REVALIDATE_SECONDS = 60;
+// How long the photo route trusts its cached list of photo IDs. The page itself
+// re-reads the sheet on every regeneration (see `revalidate` in app/page.tsx).
+const PHOTO_ID_CACHE_SECONDS = 60;
 
 export type AuctionKind = "live" | "silent";
 
@@ -34,11 +35,7 @@ async function fetchRows(): Promise<Row[]> {
   const url =
     `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}` +
     `/values/${encodeURIComponent(tab)}?valueRenderOption=FORMATTED_VALUE`;
-  const res = await googleFetch(url);
-  if (!res.ok) {
-    throw new Error(`Sheets API ${res.status}: ${await res.text()}`);
-  }
-  const { values = [] } = (await res.json()) as { values?: string[][] };
+  const { values = [] } = await googleGetJson<{ values?: string[][] }>(url);
   const [header = [], ...body] = values;
   const keys = header.map((h) => h.trim().toLowerCase());
   return body.map((cells) =>
@@ -108,13 +105,28 @@ function toDonations(rows: Row[], sample: boolean): Donations {
   return { items, cashTotal, cashCount, fetchedAt: new Date().toISOString(), sample };
 }
 
-const getLiveDonations = unstable_cache(
-  async () => toDonations(await fetchRows(), false),
-  ["donations"],
-  { revalidate: REVALIDATE_SECONDS },
-);
+async function getLiveDonations(): Promise<Donations> {
+  return toDonations(await fetchRows(), false);
+}
 
+// Cached copy for the photo route, so loading a page of photos doesn't read
+// the sheet once per photo. Not used by the page: stacking this cache under
+// the page's own revalidation would delay new donations by up to two periods.
+const getCachedLiveDonations = unstable_cache(getLiveDonations, ["donations"], {
+  revalidate: PHOTO_ID_CACHE_SECONDS,
+});
+
+/** Fresh read of the sheet (or sample data). */
 export async function getDonations(): Promise<Donations> {
+  return loadDonations(getLiveDonations);
+}
+
+/** Possibly up to a minute stale; for high-volume lookups like photo requests. */
+export async function getCachedDonations(): Promise<Donations> {
+  return loadDonations(getCachedLiveDonations);
+}
+
+async function loadDonations(live: () => Promise<Donations>): Promise<Donations> {
   if (process.env.USE_SAMPLE_DATA === "1") {
     return toDonations(SAMPLE_ROWS, true);
   }
@@ -125,5 +137,5 @@ export async function getDonations(): Promise<Donations> {
     }
     return toDonations(SAMPLE_ROWS, true);
   }
-  return getLiveDonations();
+  return live();
 }

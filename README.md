@@ -34,4 +34,4 @@ If no credentials are set, dev mode shows sample data. You can also force sample
 2. Add the same environment variables in Project → Settings → Environment Variables. For `GOOGLE_PRIVATE_KEY`, paste the `private_key` value from the JSON file.
 3. Deploy. In production the app refuses to fall back to sample data, so missing credentials cause an error instead of showing fake items.
 
-To change the refresh interval, edit `revalidate` in `app/page.tsx` and `REVALIDATE_SECONDS` in `lib/donations.ts`.
+To change the refresh interval, edit `revalidate` in `app/page.tsx`.

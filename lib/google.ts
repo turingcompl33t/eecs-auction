@@ -1,3 +1,4 @@
+import https from "node:https";
 import { JWT } from "google-auth-library";
 
 const SCOPES = [
@@ -52,4 +53,36 @@ export async function googleFetch(url: string, init: RequestInit = {}): Promise<
   const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${token}`);
   return fetch(url, { ...init, headers, cache: "no-store" });
+}
+
+/**
+ * GET a Google API JSON endpoint without going through fetch(). Next.js
+ * patches fetch: inside the ISR page a no-store fetch makes the page dynamic
+ * (a sheet read per visit), and a default fetch lands in Next's data cache,
+ * stacking a second 60s delay on top of the page's own. node:https is
+ * invisible to Next, so each page regeneration gets a genuinely fresh read.
+ */
+export async function googleGetJson<T>(url: string): Promise<T> {
+  const { token } = await getClient().getAccessToken();
+  return new Promise((resolve, reject) => {
+    const req = https.get(url, { headers: { Authorization: `Bearer ${token}` } }, (res) => {
+      let body = "";
+      res.setEncoding("utf8");
+      res.on("data", (chunk) => (body += chunk));
+      res.on("end", () => {
+        const status = res.statusCode ?? 0;
+        if (status < 200 || status >= 300) {
+          reject(new Error(`Google API ${status}: ${body.slice(0, 500)}`));
+          return;
+        }
+        try {
+          resolve(JSON.parse(body) as T);
+        } catch (err) {
+          reject(err);
+        }
+      });
+    });
+    req.on("error", reject);
+    req.setTimeout(15_000, () => req.destroy(new Error("Google API request timed out")));
+  });
 }

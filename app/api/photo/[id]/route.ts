@@ -1,4 +1,4 @@
-import { getDonations } from "@/lib/donations";
+import { getCachedDonations, getDonations } from "@/lib/donations";
 import { googleFetch } from "@/lib/google";
 
 // Serves form-uploaded photos from Drive via the service account. Only IDs
@@ -7,33 +7,49 @@ import { googleFetch } from "@/lib/google";
 //
 // We fetch Drive's resized thumbnail rather than the original: phone photos
 // can exceed Vercel's 4.5MB response limit, and HEIC originals don't render
-// in most browsers. Thumbnails are always JPEG/PNG.
-const MAX_EDGE_PX = 1600;
+// in most browsers. Thumbnails are always JPEG/PNG. Cards display at ~380px
+// wide, so 800px covers high-DPI screens.
+const MAX_EDGE_PX = 800;
+
+const DRIVE_ID = /^[\w-]{10,100}$/;
+
+// Shown while Drive is still generating the thumbnail for a fresh upload (or
+// if Drive errors). Never cached, so the real photo appears on a later load.
+const PENDING_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+<rect width="400" height="300" fill="#333c33"/>
+<text x="200" y="158" text-anchor="middle" fill="#d3bc8d" font-family="sans-serif" font-size="20" font-weight="600">Photo coming soon</text>
+</svg>`;
+
+function pending(): Response {
+  return new Response(PENDING_SVG, {
+    headers: { "Content-Type": "image/svg+xml", "Cache-Control": "no-store" },
+  });
+}
+
+async function isKnownPhoto(id: string): Promise<boolean> {
+  const has = (d: Awaited<ReturnType<typeof getDonations>>) =>
+    d.items.some((item) => item.photoIds.includes(id));
+  // The cached list can lag the page by up to a minute; on a miss, confirm
+  // against a fresh read so a just-submitted photo isn't rejected.
+  return has(await getCachedDonations()) || has(await getDonations());
+}
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { items } = await getDonations();
-  if (!items.some((item) => item.photoIds.includes(id))) {
+  if (!DRIVE_ID.test(id) || !(await isKnownPhoto(id))) {
     return new Response("Not found", { status: 404 });
   }
 
   const meta = await googleFetch(
     `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}` +
-      `?fields=thumbnailLink,mimeType&supportsAllDrives=true`,
+      `?fields=thumbnailLink&supportsAllDrives=true`,
   );
-  if (!meta.ok) {
-    return new Response("Photo unavailable", { status: 502 });
-  }
+  if (!meta.ok) return pending();
   const { thumbnailLink } = (await meta.json()) as { thumbnailLink?: string };
+  if (!thumbnailLink) return pending();
 
-  const img = thumbnailLink
-    ? await googleFetch(thumbnailLink.replace(/=s\d+$/, `=s${MAX_EDGE_PX}`))
-    : await googleFetch(
-        `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?alt=media&supportsAllDrives=true`,
-      );
-  if (!img.ok || !img.body) {
-    return new Response("Photo unavailable", { status: 502 });
-  }
+  const img = await googleFetch(thumbnailLink.replace(/=s\d+$/, `=s${MAX_EDGE_PX}`));
+  if (!img.ok || !img.body) return pending();
 
   return new Response(img.body, {
     headers: {
