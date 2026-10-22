@@ -28,6 +28,7 @@ export const SAMPLE_ROWS: Record<string, string>[] = [
   {
     donation_type: "Auction item",
     auction_fullname: "Grad Student Council",
+    auction_anon: "Remain anonymous",
     auction_title: "Homemade Pie of the Month (3 months)",
     auction_description: "One handmade pie delivered to your office each month, flavor of your choice.",
     auction_type: "Silent Auction",

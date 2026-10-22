@@ -1,20 +1,9 @@
-here is the situation:
-
-i am running an auction for my academic department. i am currently collecting donations for the auction. donations are recorded via a google form, and saved to a google sheet. the sheet is saved locally here (as excel) for your reference (EECS Auction 2026 (Responses))
-
-this works for donation management on the backend. however, i need a way to show people who will be attending what items have been donated so far. i want to generate an auction preview effectively.
-
-this needs to be kept up to date: we need to be able to poll the spreadsheet and re-render the preview at runtime, without redeploy
-
-i am hoping to do this via a simple single-container web-app we host on vercel, which i have used before
-
----
-
 ## How it works
 
 A Next.js app (`app/page.tsx`) reads the `Form Responses 1` tab through the Google Sheets API using a service account. The page uses ISR with `revalidate = 60`, so Vercel re-reads the sheet in the background at most once a minute and new form responses appear without a redeploy.
 
-- Rows with an `auction_title` become item cards showing title, description, donor, estimated value, starting bid, and photo. Newest items come first.
+- Rows with an `auction_title` become item cards showing title, description, donor, starting bid, and photo. (`auction_value` is collected but not shown.)
+- If `auction_anon` has any answer (the form's "Remain anonymous" checkbox), the card says "Donated by Anonymous" and the donor's name is never sent to the browser. Newest items come first.
 - Items are split into **Live Auction** and **Silent Auction** sections based on `auction_type`. Any value containing "live" (any capitalization) goes to Live; everything else, including blanks, goes to Silent.
 - `cash_amount` values are added up into one "Cash donations" total. Cash donor names are not shown.
 - Emails and `auction_comments` are never sent to the browser.

@@ -1,4 +1,5 @@
 import { formatUsd, getDonations } from "@/lib/donations";
+import { EVENT, EVENT_MAP_URL } from "@/lib/event";
 import AuctionSection from "./AuctionSection";
 
 // Re-render at most this often; the sheet is re-read in the background, so new
@@ -29,9 +30,17 @@ export default async function Page() {
             />
             <div>
               <p className="eyebrow">Auction preview</p>
-              <h1>EECS Auction 2026</h1>
+              <h1>{EVENT.name}</h1>
+              <p className="event">
+                <span>
+                  {EVENT.date} &middot; {EVENT.time}
+                </span>
+                <a href={EVENT_MAP_URL} target="_blank" rel="noopener noreferrer">
+                  {EVENT.venue}, {EVENT.address}
+                </a>
+              </p>
               <p className="lede">
-                This page provides a preview of the auction, displaying the donated items that we&rsquo;ve received so far. Updates propagate within about a minute of a new submission, just refresh your browser.
+                This page provides a preview of the auction, displaying the donated items that we&rsquo;ve received so far. Updates propagate within about a minute of a new submission; just refresh your browser.
               </p>
             </div>
           </div>

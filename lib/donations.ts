@@ -13,7 +13,6 @@ export type AuctionItem = {
   description: string;
   auction: AuctionKind;
   donor: string;
-  value: string | null;
   startingBid: string | null;
   photoIds: string[];
 };
@@ -90,8 +89,9 @@ function toDonations(rows: Row[], sample: boolean): Donations {
         description: r.auction_description ?? "",
         // Anything not marked live (including blank) goes in the silent auction
         auction: /live/i.test(r.auction_type ?? "") ? "live" : "silent",
-        donor: r.auction_fullname ?? "",
-        value: formatMoney(r.auction_value ?? ""),
+        // auction_anon is a single "Remain anonymous" checkbox: any answer means
+        // hide the name. Replaced here so the real name never reaches the page.
+        donor: r.auction_anon ? "Anonymous" : (r.auction_fullname ?? ""),
         startingBid: formatMoney(r.auction_starting ?? ""),
         photoIds: extractDriveIds(r.auction_photo ?? ""),
       });

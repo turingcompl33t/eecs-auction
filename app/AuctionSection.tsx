@@ -59,10 +59,6 @@ function ItemCard({ item }: { item: AuctionItem }) {
 
       <dl className="card-prices">
         <div>
-          <dt>Est. value</dt>
-          <dd>{item.value ?? "—"}</dd>
-        </div>
-        <div>
           <dt>Starting bid</dt>
           <dd>{item.startingBid ?? "—"}</dd>
         </div>
