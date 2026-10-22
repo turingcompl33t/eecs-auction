@@ -48,27 +48,25 @@ function ItemCard({ item }: { item: AuctionItem }) {
       </div>
 
       <div className="card-body">
-        <h3>{item.title}</h3>
-        {item.donor && <p className="card-donor">Donated by {item.donor}</p>}
-        {item.description && <p className="card-description">{item.description}</p>}
+        <h3 title={item.title}>{item.title}</h3>
+        <p className="card-donor" title={item.donor || undefined}>
+          {item.donor && `Donated by ${item.donor}`}
+        </p>
+        <p className="card-description" title={item.description || undefined}>
+          {item.description}
+        </p>
       </div>
 
-      {(item.value || item.startingBid) && (
-        <dl className="card-prices">
-          {item.value && (
-            <div>
-              <dt>Est. value</dt>
-              <dd>{item.value}</dd>
-            </div>
-          )}
-          {item.startingBid && (
-            <div>
-              <dt>Starting bid</dt>
-              <dd>{item.startingBid}</dd>
-            </div>
-          )}
-        </dl>
-      )}
+      <dl className="card-prices">
+        <div>
+          <dt>Est. value</dt>
+          <dd>{item.value ?? "—"}</dd>
+        </div>
+        <div>
+          <dt>Starting bid</dt>
+          <dd>{item.startingBid ?? "—"}</dd>
+        </div>
+      </dl>
     </article>
   );
 }
