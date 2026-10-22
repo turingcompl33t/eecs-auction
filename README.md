@@ -1,0 +1,48 @@
+here is the situation:
+
+i am running an auction for my academic department. i am currently collecting donations for the auction. donations are recorded via a google form, and saved to a google sheet. the sheet is saved locally here (as excel) for your reference (EECS Auction 2026 (Responses))
+
+this works for donation management on the backend. however, i need a way to show people who will be attending what items have been donated so far. i want to generate an auction preview effectively.
+
+this needs to be kept up to date: we need to be able to poll the spreadsheet and re-render the preview at runtime, without redeploy
+
+i am hoping to do this via a simple single-container web-app we host on vercel, which i have used before
+
+---
+
+## How it works
+
+A Next.js app (`app/page.tsx`) reads the `Form Responses 1` tab through the Google Sheets API using a service account. The page uses ISR with `revalidate = 60`, so Vercel re-reads the sheet in the background at most once a minute and new form responses appear without a redeploy.
+
+- Rows with an `auction_title` become item cards showing title, description, donor, estimated value, starting bid, and photo. Newest items come first.
+- Items are split into **Live Auction** and **Silent Auction** sections based on `auction_type`. Any value containing "live" (any capitalization) goes to Live; everything else, including blanks, goes to Silent.
+- `cash_amount` values are added up into one "Cash donations" total. Cash donor names are not shown.
+- Emails and `auction_comments` are never sent to the browser.
+- Photos uploaded through the form are served by `/api/photo/[id]`. It fetches a resized JPEG from Drive with the service account, so the Drive files stay private. It only serves IDs that appear in the sheet.
+- Columns are matched by header name, so reordering columns is fine but renaming headers is not.
+
+## Setup
+
+### 1. Service account (one time)
+1. In the [Google Cloud console](https://console.cloud.google.com/), create a project (or reuse one).
+2. Enable the **Google Sheets API** and the **Google Drive API** (APIs & Services → Library).
+3. Go to IAM & Admin → Service Accounts → Create service account. It needs no roles.
+4. Open the account → Keys → Add key → JSON. Keep the downloaded file safe.
+5. Share with the service account's email (`...@...iam.gserviceaccount.com`) as **Viewer**:
+   - the response Google Sheet
+   - the Drive folder where the form stores uploaded photos (usually `<Form name> (File responses)` in the form owner's Drive)
+
+### 2. Local development
+```bash
+npm install
+cp .env.example .env.local   # fill in SHEET_ID, GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_PRIVATE_KEY
+npm run dev                  # http://localhost:3000
+```
+If no credentials are set, dev mode shows sample data. You can also force sample data with `USE_SAMPLE_DATA=1`.
+
+### 3. Deploy to Vercel
+1. Push this directory to a GitHub repo and import it in Vercel. Use the default Next.js settings.
+2. Add the same environment variables in Project → Settings → Environment Variables. For `GOOGLE_PRIVATE_KEY`, paste the `private_key` value from the JSON file.
+3. Deploy. In production the app refuses to fall back to sample data, so missing credentials cause an error instead of showing fake items.
+
+To change the refresh interval, edit `revalidate` in `app/page.tsx` and `REVALIDATE_SECONDS` in `lib/donations.ts`.
