@@ -7,6 +7,8 @@ export const EVENT = {
   address: "West Point, NY 10996",
 };
 
+export const DONATE_URL = "https://forms.gle/ypMeCzfM1VWjcEwk7";
+
 export const EVENT_MAP_URL =
   "https://www.google.com/maps/search/?api=1&query=" +
   encodeURIComponent(`${EVENT.venue}, ${EVENT.address}`);

@@ -8,7 +8,7 @@ A Next.js app (`app/page.tsx`) reads the `Form Responses 1` tab through the Goog
 - `cash_amount` values are added up into one "Cash donations" total. Cash donor names are not shown.
 - Emails and `auction_comments` are never sent to the browser.
 - Photos uploaded through the form are served by `/api/photo/[id]`. It fetches a resized JPEG from Drive with the service account, so the Drive files stay private. It only serves IDs that appear in the sheet.
-- Columns are matched by header name, so reordering columns is fine but renaming headers is not.
+- Columns are read by position (A–O, see `COLUMNS` in `lib/donations.ts`), so header text doesn't matter: Google Forms rewrites it whenever the form is edited. Don't insert, delete or move columns in the sheet; adding new form questions is fine (they go at the end).
 
 ## Setup
 

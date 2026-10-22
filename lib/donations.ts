@@ -28,7 +28,29 @@ export type Donations = {
 
 type Row = Record<string, string>;
 
-/** Read the response tab and return one object per row, keyed by header name. */
+// Columns are read by position, not header text: Google Forms rewrites the
+// header row from the question text whenever the form is edited. A question
+// keeps its column when edited or reordered, and new questions are appended,
+// so positions are stable. Index 0 = column A.
+const COLUMNS = [
+  "timestamp", // A
+  "donation_type", // B
+  "cash_fullname", // C
+  "cash_email", // D
+  "cash_amount", // E
+  "auction_fullname", // F
+  "auction_email", // G
+  "auction_title", // H
+  "auction_description", // I
+  "auction_type", // J
+  "auction_value", // K
+  "auction_starting", // L
+  "auction_photo", // M
+  "auction_comments", // N
+  "auction_anon", // O
+] as const;
+
+/** Read the response tab and return one object per data row, keyed by COLUMNS. */
 async function fetchRows(): Promise<Row[]> {
   const sheetId = process.env.SHEET_ID!;
   const tab = process.env.SHEET_TAB || "Form Responses 1";
@@ -36,10 +58,9 @@ async function fetchRows(): Promise<Row[]> {
     `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}` +
     `/values/${encodeURIComponent(tab)}?valueRenderOption=FORMATTED_VALUE`;
   const { values = [] } = await googleGetJson<{ values?: string[][] }>(url);
-  const [header = [], ...body] = values;
-  const keys = header.map((h) => h.trim().toLowerCase());
+  const body = values.slice(1); // skip the header row
   return body.map((cells) =>
-    Object.fromEntries(keys.map((k, i) => [k, (cells[i] ?? "").toString().trim()])),
+    Object.fromEntries(COLUMNS.map((k, i) => [k, (cells[i] ?? "").toString().trim()])),
   );
 }
 
