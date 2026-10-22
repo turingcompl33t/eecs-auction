@@ -15,12 +15,31 @@ export function hasCredentials(): boolean {
   );
 }
 
+/**
+ * Normalize the private key from env. Dashboards like Vercel store values
+ * verbatim, so tolerate the common paste variants: wrapping quotes, literal
+ * "\n" escapes, Windows line endings, or the whole service-account JSON.
+ */
+function readPrivateKey(): string {
+  let key = (process.env.GOOGLE_PRIVATE_KEY ?? "").trim();
+  if (key.startsWith("{")) {
+    key = JSON.parse(key).private_key ?? "";
+  }
+  key = key.replace(/^["']|["']$/g, "").replace(/\\n/g, "\n").replace(/\r/g, "");
+  if (!key.includes("-----BEGIN PRIVATE KEY-----") || !key.includes("-----END PRIVATE KEY-----")) {
+    throw new Error(
+      "GOOGLE_PRIVATE_KEY is malformed: expected the private_key value from the service account JSON, " +
+        "including the BEGIN/END PRIVATE KEY lines",
+    );
+  }
+  return key;
+}
+
 function getClient(): JWT {
   if (!client) {
     client = new JWT({
       email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      // Env vars often store the key with literal "\n" sequences
-      key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+      key: readPrivateKey(),
       scopes: SCOPES,
     });
   }
