@@ -20,7 +20,7 @@ export const SAMPLE_ROWS: Record<string, string>[] = [
     donation_type: "Auction item",
     auction_fullname: "The Systems Lab",
     auction_title: "Retired Rack Server (with blinking lights)",
-    auction_description: "Fully decommissioned 2U server. Excellent space heater. Drives removed.",
+    auction_description: "Fully decommissioned 2U server. Excellent space heater. Drives removed.\n\nComes with the original rails, two (2) power supplies, and a laminated certificate of service signed by every TA who ever restarted it at 0300.\n\nPickup only. Bring a friend; it is heavier than it looks.",
     auction_type: "Silent Auction",
     auction_value: "150",
     auction_starting: "20",

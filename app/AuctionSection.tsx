@@ -1,4 +1,5 @@
 import type { AuctionItem } from "@/lib/donations";
+import ItemCard from "./ItemCard";
 
 export default function AuctionSection(props: {
   id: string;
@@ -28,41 +29,5 @@ export default function AuctionSection(props: {
         </ul>
       )}
     </section>
-  );
-}
-
-function ItemCard({ item }: { item: AuctionItem }) {
-  const [photo] = item.photoIds;
-
-  return (
-    <article className="card">
-      <div className="card-photo">
-        {photo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={`/api/photo/${photo}`} alt={item.title} loading="lazy" />
-        ) : (
-          <span className="card-photo-placeholder" aria-hidden>
-            {item.title.charAt(0)}
-          </span>
-        )}
-      </div>
-
-      <div className="card-body">
-        <h3 title={item.title}>{item.title}</h3>
-        <p className="card-donor" title={item.donor || undefined}>
-          {item.donor && `Donated by ${item.donor}`}
-        </p>
-        <p className="card-description" title={item.description || undefined}>
-          {item.description}
-        </p>
-      </div>
-
-      <dl className="card-prices">
-        <div>
-          <dt>Starting bid</dt>
-          <dd>{item.startingBid ?? "—"}</dd>
-        </div>
-      </dl>
-    </article>
   );
 }
