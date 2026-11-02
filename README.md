@@ -3,7 +3,7 @@
 A Next.js app (`app/page.tsx`) reads the `Form Responses 1` tab through the Google Sheets API using a service account. The page uses ISR with `revalidate = 60`, so Vercel re-reads the sheet in the background at most once a minute and new form responses appear without a redeploy.
 
 - Rows with an `auction_title` become item cards showing title, description, donor, starting bid, and photo. (`auction_value` is collected but not shown.)
-- If `auction_anon` has any answer (the form's "Remain anonymous" checkbox), the card says "Donated by Anonymous" and the donor's name is never sent to the browser. Newest items come first.
+- If `auction_anon` contains "anonymous" (the form's "Remain anonymous" option), the card says "Donated by Anonymous" and the donor's name is never sent to the browser. Any other answer ("Include my name") or a blank shows the name. If you reword the anonymous option, keep the word "anonymous" in it. Newest items come first.
 - Items are split into **Live Auction** and **Silent Auction** sections based on `auction_type`. Any value containing "live" (any capitalization) goes to Live; everything else, including blanks, goes to Silent.
 - `cash_amount` values are added up into one "Cash donations" total. Cash donor names are not shown.
 - Emails and `auction_comments` are never sent to the browser.
