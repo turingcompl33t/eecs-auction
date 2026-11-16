@@ -22,3 +22,5 @@ lint-check: lint
 
 typecheck:
 	mypy src
+
+typecheck-check: typecheck
