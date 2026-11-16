@@ -31,7 +31,7 @@ export const SAMPLE_ROWS: Record<string, string>[] = [
     auction_anon: "Remain anonymous",
     auction_title: "Homemade Pie of the Month (3 months)",
     auction_description: "One handmade pie delivered to your office each month, flavor of your choice.",
-    auction_type: "Silent Auction",
+    auction_type: "Don't know / don't care",
     auction_value: "Priceless",
     auction_starting: "$30",
   },

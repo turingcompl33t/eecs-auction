@@ -6,7 +6,7 @@ import { SAMPLE_ROWS } from "./sample";
 // re-reads the sheet on every regeneration (see `revalidate` in app/page.tsx).
 const PHOTO_ID_CACHE_SECONDS = 60;
 
-export type AuctionKind = "live" | "silent";
+export type AuctionKind = "live" | "silent" | "tbd";
 
 export type AuctionItem = {
   id: string;
@@ -94,6 +94,14 @@ function extractDriveIds(raw: string): string[] {
   return ids;
 }
 
+// auction_type is "Live Auction", "Silent Auction", or "Don't know / don't
+// care". Anything not explicitly live or silent (including blank) is undecided.
+function toAuctionKind(type: string): AuctionKind {
+  if (/live/i.test(type)) return "live";
+  if (/silent/i.test(type)) return "silent";
+  return "tbd";
+}
+
 function toDonations(rows: Row[], sample: boolean): Donations {
   const items: AuctionItem[] = [];
   let cashTotal = 0;
@@ -105,8 +113,7 @@ function toDonations(rows: Row[], sample: boolean): Donations {
         id: `row-${i + 2}`,
         title: r.auction_title,
         description: r.auction_description ?? "",
-        // Anything not marked live (including blank) goes in the silent auction
-        auction: /live/i.test(r.auction_type ?? "") ? "live" : "silent",
+        auction: toAuctionKind(r.auction_type ?? ""),
         // auction_anon is "Include my name" or "Remain anonymous". Replaced here
         // so an anonymous donor's real name never reaches the page.
         donor: /anonym/i.test(r.auction_anon ?? "") ? "Anonymous" : (r.auction_fullname ?? ""),

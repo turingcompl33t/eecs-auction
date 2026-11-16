@@ -10,6 +10,7 @@ export default async function Page() {
   const { items, cashTotal, cashCount, fetchedAt, sample } = await getDonations();
   const live = items.filter((i) => i.auction === "live");
   const silent = items.filter((i) => i.auction === "silent");
+  const tbd = items.filter((i) => i.auction === "tbd");
 
   return (
     <>
@@ -55,6 +56,10 @@ export default async function Page() {
               <span className="stat-label">Silent auction</span>
               <span className="stat-value">{silent.length}</span>
             </a>
+            <a href="#tbd">
+              <span className="stat-label">To be determined</span>
+              <span className="stat-value">{tbd.length}</span>
+            </a>
             {cashCount > 0 && (
               <div>
                 <span className="stat-label">Cash donations</span>
@@ -77,6 +82,12 @@ export default async function Page() {
           title="Silent Auction"
           blurb="Bid on these throughout the event."
           items={silent}
+        />
+        <AuctionSection
+          id="tbd"
+          title="To Be Determined"
+          blurb="Live or silent auction not yet decided."
+          items={tbd}
         />
 
         <footer className="footer">
