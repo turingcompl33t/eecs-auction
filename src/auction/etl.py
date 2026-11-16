@@ -1,12 +1,11 @@
-"""Build auction ingest bundles from the donation sheet.
+"""Build the auction ingest bundle from the donation sheet.
 
 Reads the same Google Form response sheet as the preview site (credentials
 from .env.local, see README) and writes, under the output directory:
 
-    silent/items.jsonl       one JSON object per silent-auction item
-    silent/photos/...        photos referenced by those items
-    silent.zip               the above, archived for hand-off
-    live/...  live.zip       same layout for live-auction items
+    auction/items.jsonl      one JSON object per item, live and silent
+    auction/photos/...       photos referenced by those items
+    auction.zip              the above, archived for hand-off
 
 Usage:
     uv run auction-etl --undecided silent
@@ -234,8 +233,8 @@ def build_items(
     for row in rows:
         if not row["auction_title"]:
             continue  # cash-only donation
-        # IDs are random, so they differ on every run: the bundles from one
-        # run are a matched set and shouldn't be mixed with another run's.
+        # IDs are random, so they differ on every run: don't mix bundles
+        # (or anything derived from them) from different runs.
         item_id = new_item_id(taken)
         items.append(
             Item(
@@ -257,6 +256,7 @@ def to_record(item: Item, photos: list[str], warnings: list[str]) -> dict:
         )
     return {
         "item_id": item.item_id,
+        "auction_type": item.kind,
         # Always the real name: the anonymity option only applies to the public preview site.
         "donor": r["auction_fullname"],
         "donor_email": r["auction_email"] or None,
@@ -271,15 +271,17 @@ def to_record(item: Item, photos: list[str], warnings: list[str]) -> dict:
 # --- Load --------------------------------------------------------------------
 
 
+BUNDLE_NAME = "auction"
+
+
 def write_bundle(
     session: AuthorizedSession,
     items: list[Item],
-    kind: AuctionKind,
     out: Path,
     max_edge: int,
     warnings: list[str],
 ) -> Path:
-    bundle = out / kind
+    bundle = out / BUNDLE_NAME
     photo_dir = bundle / "photos"
     photo_dir.mkdir(parents=True)
 
@@ -308,24 +310,24 @@ def write_bundle(
                 + "\n"
             )
             print(
-                f"  {kind:6} {item.item_id}  {len(photos)} photo(s)  {item.row['auction_title']}"
+                f"  {item.kind:6} {item.item_id}  {len(photos)} photo(s)  {item.row['auction_title']}"
             )
 
     archive = shutil.make_archive(
-        str(out / kind), "zip", root_dir=out, base_dir=kind
+        str(out / BUNDLE_NAME), "zip", root_dir=out, base_dir=BUNDLE_NAME
     )
     return Path(archive)
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Build silent and live auction ingest bundles from the donation sheet."
+        description="Build the auction ingest bundle (live and silent items) from the donation sheet."
     )
     parser.add_argument(
         "--undecided",
         required=True,
         choices=["live", "silent"],
-        help="which auction gets items whose type is \"Don't know / don't care\" (or blank)",
+        help="auction_type for items marked \"Don't know / don't care\" (or blank)",
     )
     parser.add_argument(
         "--out",
@@ -363,22 +365,12 @@ def main(argv: list[str] | None = None) -> int:
 
     warnings: list[str] = []
     out.mkdir(parents=True)
-    archives = []
-    for kind in ("silent", "live"):
-        subset = [it for it in items if it.kind == kind]
-        archives.append(
-            (
-                kind,
-                len(subset),
-                write_bundle(
-                    session, subset, kind, out, args.photo_size, warnings
-                ),
-            )
-        )
+    archive = write_bundle(session, items, out, args.photo_size, warnings)
 
-    print()
-    for kind, count, archive in archives:
-        print(f"{kind:6} {count:3} items -> {archive}")
+    counts = {k: sum(it.kind == k for it in items) for k in ("live", "silent")}
+    print(
+        f"\n{len(items)} items ({counts['live']} live, {counts['silent']} silent) -> {archive}"
+    )
     if warnings:
         print(f"\n{len(warnings)} warning(s):")
         for w in warnings:
