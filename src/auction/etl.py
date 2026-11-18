@@ -69,6 +69,7 @@ class Item:
     kind: AuctionKind
     row: dict[str, str]
     photo_ids: list[str]
+    undecided: bool  # donor said "Don't know" or left it blank; kind came from --undecided
 
 
 # --- Google access -----------------------------------------------------------
@@ -189,13 +190,13 @@ def download_photo(
 # --- Transform ---------------------------------------------------------------
 
 
-def classify(auction_type: str, undecided: AuctionKind) -> AuctionKind:
-    """Same rule as toAuctionKind() in lib/donations.ts; "Don't know" and blank -> undecided."""
+def classify(auction_type: str) -> AuctionKind | None:
+    """Same rule as toAuctionKind() in lib/donations.ts; "Don't know" and blank -> None."""
     if re.search(r"live", auction_type, re.I):
         return "live"
     if re.search(r"silent", auction_type, re.I):
         return "silent"
-    return undecided
+    return None
 
 
 def extract_drive_ids(raw: str) -> list[str]:
@@ -236,12 +237,14 @@ def build_items(
         # IDs are random, so they differ on every run: don't mix bundles
         # (or anything derived from them) from different runs.
         item_id = new_item_id(taken)
+        kind = classify(row["auction_type"])
         items.append(
             Item(
                 item_id,
-                classify(row["auction_type"], undecided),
+                kind or undecided,
                 row,
                 extract_drive_ids(row["auction_photo"]),
+                undecided=kind is None,
             )
         )
     return items
@@ -371,6 +374,19 @@ def main(argv: list[str] | None = None) -> int:
     print(
         f"\n{len(items)} items ({counts['live']} live, {counts['silent']} silent) -> {archive}"
     )
+
+    undecided = [it for it in items if it.undecided]
+    if undecided:
+        print(
+            f"\n{len(undecided)} undecided item(s), set to {args.undecided}"
+            " (review and edit auction_type in items.jsonl, then rebuild the zip):"
+        )
+        for it in undecided:
+            answer = it.row["auction_type"] or "(blank)"
+            print(
+                f"  - {it.item_id}  {it.row['auction_title']}  [form answer: {answer}]"
+            )
+
     if warnings:
         print(f"\n{len(warnings)} warning(s):")
         for w in warnings:
